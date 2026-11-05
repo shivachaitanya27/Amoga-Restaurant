@@ -1,7 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useRestaurant } from '../context/RestaurantContext';
+import { subscribeToOrders } from '../firebase/firestore';
+import { Order } from '../types';
+import { 
+  playOrderNotificationSound, 
+  isOrderSoundEnabled, 
+  setOrderSoundEnabled, 
+  getAudioContext 
+} from '../utils/soundAlert';
 import { 
   LayoutDashboard, 
   UtensilsCrossed, 
@@ -19,7 +27,10 @@ import {
   X,
   ShieldCheck,
   Globe,
-  Loader2
+  Loader2,
+  Volume2,
+  VolumeX,
+  BellRing
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -28,6 +39,94 @@ export const AdminLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  // Live order sound & notification toast state
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(isOrderSoundEnabled);
+  const [newOrderAlert, setNewOrderAlert] = useState<Order | null>(null);
+  const initialLoadRef = useRef(true);
+  const knownOrderIdsRef = useRef<Set<string>>(new Set());
+
+  // 1. Prime AudioContext on any admin interaction so browser never blocks audio
+  useEffect(() => {
+    const unlockAudio = () => {
+      getAudioContext();
+    };
+    window.addEventListener('click', unlockAudio, { once: false });
+    window.addEventListener('keydown', unlockAudio, { once: false });
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, []);
+
+  // 2. Real-time Order Listener with Instant Sound Chime
+  useEffect(() => {
+    if (!adminUser) return;
+
+    const unsub = subscribeToOrders((orders) => {
+      // Ignore initial load so we don't alert on past historic orders
+      if (initialLoadRef.current) {
+        orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+        initialLoadRef.current = false;
+        return;
+      }
+
+      // Check for incoming orders not previously seen
+      const newIncoming = orders.filter((o) => 
+        !knownOrderIdsRef.current.has(o.id) && o.status === 'New'
+      );
+
+      // Add all to known set
+      orders.forEach((o) => knownOrderIdsRef.current.add(o.id));
+
+      if (newIncoming.length > 0) {
+        const latest = newIncoming[0];
+        setNewOrderAlert(latest);
+
+        // Play loud distinctive order chime if sound is enabled
+        if (soundEnabled) {
+          playOrderNotificationSound(0.65);
+        }
+      }
+    });
+
+    return () => unsub();
+  }, [adminUser, soundEnabled]);
+
+  // 3. Flashing browser tab title when an unread order arrives
+  useEffect(() => {
+    if (!newOrderAlert) {
+      document.title = 'Amoga Admin Portal';
+      return;
+    }
+
+    let isAlertTitle = true;
+    const interval = setInterval(() => {
+      document.title = isAlertTitle 
+        ? `🔔 (NEW ORDER ₹${newOrderAlert.totalAmount}) - Amoga Admin`
+        : 'Amoga Admin Portal';
+      isAlertTitle = !isAlertTitle;
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+      document.title = 'Amoga Admin Portal';
+    };
+  }, [newOrderAlert]);
+
+  const handleToggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    setOrderSoundEnabled(next);
+    if (next) {
+      // Play a quick preview chime to confirm audio is active
+      playOrderNotificationSound(0.4);
+    }
+  };
+
+  const handleTestSound = () => {
+    playOrderNotificationSound(0.65);
+  };
 
   // 1. While auth state is initializing, show clean loader
   if (loading) {
@@ -151,8 +250,43 @@ export const AdminLayout: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
+          <div className="flex items-center gap-3 sm:gap-4">
+            {/* Live Order Sound Alert Controls */}
+            <div className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-xl p-1">
+              <button
+                type="button"
+                onClick={handleToggleSound}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                  soundEnabled
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
+                }`}
+                title={soundEnabled ? "Order Alert Sound is ON. Click to mute." : "Order Alert Sound is MUTED. Click to unmute."}
+              >
+                {soundEnabled ? (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Chime: ON</span>
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Chime: OFF</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTestSound}
+                className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-amoga-burgundy hover:bg-white rounded-lg transition-colors cursor-pointer"
+                title="Test order notification bell"
+              >
+                Test Chime
+              </button>
+            </div>
+
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span className="font-semibold">{adminUser.email || 'Admin'}</span>
             </div>
@@ -161,13 +295,74 @@ export const AdminLayout: React.FC = () => {
               to="/"
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amoga-burgundy bg-amoga-cream hover:bg-amoga-creamDark rounded-xl border border-amoga-creamDark transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amoga-burgundy bg-amoga-cream hover:bg-amoga-creamDark rounded-xl border border-amoga-creamDark transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Open Website</span>
             </Link>
           </div>
         </header>
+
+        {/* NEW INCOMING ORDER TOAST ALERT & SOUND NOTIFICATION */}
+        {newOrderAlert && (
+          <div className="fixed top-20 right-4 sm:right-8 z-50 max-w-sm w-full bg-white rounded-3xl shadow-2xl border-2 border-emerald-500 p-4 sm:p-5 animate-in slide-in-from-top-4 duration-300 ring-4 ring-emerald-500/10">
+            <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span className="font-bold text-xs uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
+                  <BellRing className="w-4 h-4 text-emerald-600 animate-bounce" />
+                  <span>New Food Order Received!</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewOrderAlert(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Dismiss alert"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5 text-xs text-slate-700">
+              <div className="flex justify-between items-baseline">
+                <span className="font-mono font-bold text-slate-900 text-sm">{newOrderAlert.id}</span>
+                <span className="font-serif font-bold text-amoga-burgundy text-lg">₹{newOrderAlert.totalAmount}</span>
+              </div>
+              <p className="font-medium text-slate-800">
+                Customer: <strong className="text-slate-900">{newOrderAlert.customerName}</strong> ({newOrderAlert.mobile})
+              </p>
+              <div className="flex items-center gap-2 text-[11px] text-slate-500 pt-0.5">
+                <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 font-bold border border-amber-200">
+                  {newOrderAlert.orderType}
+                </span>
+                <span>• {newOrderAlert.items.length} {newOrderAlert.items.length === 1 ? 'item' : 'items'} ordered</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-center gap-2">
+              <Link
+                to="/admin/orders"
+                onClick={() => setNewOrderAlert(null)}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold text-center shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1.5"
+              >
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>View &amp; Accept Order</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => playOrderNotificationSound(0.65)}
+                className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                title="Replay notification sound"
+              >
+                <Volume2 className="w-4 h-4 text-emerald-600" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Navigation Drawer */}
         {mobileSidebarOpen && (

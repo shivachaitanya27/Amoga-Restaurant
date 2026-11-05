@@ -122,6 +122,8 @@ export const createOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'statu
     const existing: Order[] = JSON.parse(localStorage.getItem('amoga_local_orders') || '[]');
     const updated = [fullOrder, ...existing.filter((o) => o.id !== generatedId)];
     localStorage.setItem('amoga_local_orders', JSON.stringify(updated.slice(0, 50)));
+    // Dispatch custom event for immediate same-window admin alert
+    window.dispatchEvent(new CustomEvent('amoga_new_order_placed', { detail: fullOrder }));
   } catch (err) {
     console.warn("Local orders cache write warning:", err);
   }
@@ -150,27 +152,52 @@ export const subscribeToOrders = (callback: (orders: Order[]) => void): (() => v
     }
   };
 
+  const notifyMerged = (firestoreOrders: Order[] = []) => {
+    const local = getLocalOrders();
+    const map = new Map<string, Order>();
+    firestoreOrders.forEach(o => map.set(o.id, o));
+    local.forEach(o => { if (!map.has(o.id)) map.set(o.id, o); });
+    callback(Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+  };
+
+  let unsubFirestore = () => {};
+  let currentFirestoreOrders: Order[] = [];
+
   if (isFirebaseConfigured && db) {
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
-    return onSnapshot(q, (snapshot) => {
+    unsubFirestore = onSnapshot(q, (snapshot) => {
       const orders: Order[] = [];
       snapshot.forEach((docSnap) => {
         orders.push(docSnap.data() as Order);
       });
-      // Merge with any local orders
-      const local = getLocalOrders();
-      const map = new Map<string, Order>();
-      orders.forEach(o => map.set(o.id, o));
-      local.forEach(o => { if (!map.has(o.id)) map.set(o.id, o); });
-      callback(Array.from(map.values()).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      currentFirestoreOrders = orders;
+      notifyMerged(orders);
     }, (err) => {
       console.warn("Firestore orders listener fallback:", err);
       callback(getLocalOrders());
     });
+  } else {
+    callback(getLocalOrders());
   }
 
-  callback(getLocalOrders());
-  return () => {};
+  // Cross-tab and local event listeners so admin hears sound instantly
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === 'amoga_local_orders' || e.key === null) {
+      notifyMerged(currentFirestoreOrders);
+    }
+  };
+  const handleLocalEvent = () => {
+    notifyMerged(currentFirestoreOrders);
+  };
+
+  window.addEventListener('storage', handleStorage);
+  window.addEventListener('amoga_new_order_placed', handleLocalEvent);
+
+  return () => {
+    unsubFirestore();
+    window.removeEventListener('storage', handleStorage);
+    window.removeEventListener('amoga_new_order_placed', handleLocalEvent);
+  };
 };
 
 export const updateOrderStatus = async (orderId: string, status: Order['status']): Promise<void> => {
