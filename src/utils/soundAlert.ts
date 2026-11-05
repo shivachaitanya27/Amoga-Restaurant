@@ -1,6 +1,7 @@
 /**
  * Amoga Family Restaurant - Admin Order Notification Sound System
- * High-fidelity dual-tone POS restaurant order bell synthesizer using HTML5 Web Audio API.
+ * High-impact, loud commercial restaurant POS order buzzer synthesizer.
+ * Emulates high-decibel commercial kitchen order buzzers / pagers using HTML5 Web Audio API.
  * Operates offline, zero external dependencies, zero network latency.
  */
 
@@ -24,10 +25,11 @@ export const getAudioContext = (): AudioContext | null => {
 };
 
 /**
- * Synthesizes a distinctive, pleasant, high-clarity restaurant order bell chime.
- * Rising major chord arpeggio with rich bell harmonics and natural decay.
+ * Synthesizes a loud, high-impact restaurant order buzzer ("BZZT - BZZT - BZZZZT!").
+ * Employs dual harmonic oscillators (sawtooth + square), 60Hz mechanical vibration LFO,
+ * and a hardware dynamics compressor for high acoustic penetration and volume.
  */
-export const playOrderNotificationSound = (volume: number = 0.5): boolean => {
+export const playOrderNotificationSound = (volume: number = 0.9): boolean => {
   try {
     const ctx = getAudioContext();
     if (!ctx) return false;
@@ -38,58 +40,88 @@ export const playOrderNotificationSound = (volume: number = 0.5): boolean => {
 
     const now = ctx.currentTime;
 
-    // Helper to play a single bell note with fundamental + harmonic overtone
-    const playBellNote = (freq: number, startTime: number, duration: number, gainLevel: number) => {
-      // Fundamental oscillator
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(freq, startTime);
+    // 1. Hardware-style Dynamics Compressor for maximum loud presence without clipping
+    const compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-12, now);
+    compressor.knee.setValueAtTime(6, now);
+    compressor.ratio.setValueAtTime(20, now);
+    compressor.attack.setValueAtTime(0.001, now);
+    compressor.release.setValueAtTime(0.12, now);
+    compressor.connect(ctx.destination);
 
-      // Harmonic overtone oscillator for authentic metallic chime bell texture
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'triangle';
-      osc2.frequency.setValueAtTime(freq * 2.01, startTime);
+    // 2. Master Gain
+    const masterGain = ctx.createGain();
+    const effectiveVol = Math.min(1.0, Math.max(0.2, volume));
+    masterGain.gain.setValueAtTime(effectiveVol, now);
+    masterGain.connect(compressor);
 
-      // Master gain for this note with exponential decay envelope
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(gainLevel * volume, startTime);
-      masterGain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+    /**
+     * Generates a single high-impact electric buzzer pulse ("BZZT!")
+     */
+    const playBuzzBurst = (startTime: number, duration: number, freq: number) => {
+      // Primary Oscillator: Harsh Sawtooth
+      const oscSaw = ctx.createOscillator();
+      oscSaw.type = 'sawtooth';
+      oscSaw.frequency.setValueAtTime(freq, startTime);
 
-      gain1.gain.setValueAtTime(0.75, startTime);
-      gain2.gain.setValueAtTime(0.25, startTime);
+      // Secondary Oscillator: Punchy Square wave
+      const oscSq = ctx.createOscillator();
+      oscSq.type = 'square';
+      oscSq.frequency.setValueAtTime(freq * 1.5, startTime);
 
-      osc1.connect(gain1);
-      gain1.connect(masterGain);
+      // Sub-harmonic oscillator for deep kitchen alert punch
+      const oscSub = ctx.createOscillator();
+      oscSub.type = 'triangle';
+      oscSub.frequency.setValueAtTime(freq * 0.5, startTime);
 
-      osc2.connect(gain2);
-      gain2.connect(masterGain);
+      // 60Hz Mechanical Buzzer Vibration LFO
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      lfo.type = 'square';
+      lfo.frequency.setValueAtTime(60, startTime); // 60Hz electric buzz hum
+      lfoGain.gain.setValueAtTime(75, startTime);   // +/- 75Hz vibrato rattle
+      lfo.connect(lfoGain);
+      lfoGain.connect(oscSaw.frequency);
+      lfoGain.connect(oscSq.frequency);
 
-      masterGain.connect(ctx.destination);
+      // Individual Burst Gain Envelope
+      const burstGain = ctx.createGain();
+      burstGain.gain.setValueAtTime(0.001, startTime);
+      burstGain.gain.linearRampToValueAtTime(0.95, startTime + 0.01);
+      burstGain.gain.setValueAtTime(0.9, startTime + duration - 0.02);
+      burstGain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
-      osc1.start(startTime);
-      osc2.start(startTime);
+      // Routing
+      oscSaw.connect(burstGain);
+      oscSq.connect(burstGain);
+      oscSub.connect(burstGain);
+      burstGain.connect(masterGain);
 
-      osc1.stop(startTime + duration);
-      osc2.stop(startTime + duration);
+      // Start & Stop
+      oscSaw.start(startTime);
+      oscSq.start(startTime);
+      oscSub.start(startTime);
+      lfo.start(startTime);
+
+      oscSaw.stop(startTime + duration);
+      oscSq.stop(startTime + duration);
+      oscSub.stop(startTime + duration);
+      lfo.stop(startTime + duration);
     };
 
-    // SEQUENCE 1: Rising POS Alert (C5 -> E5 -> G5 -> C6)
-    playBellNote(523.25, now + 0.00, 0.40, 0.45); // C5
-    playBellNote(659.25, now + 0.12, 0.40, 0.50); // E5
-    playBellNote(783.99, now + 0.24, 0.50, 0.55); // G5
-    playBellNote(1046.5, now + 0.36, 0.85, 0.65); // C6 (Bright bell peak)
+    // COMMERCIAL POS KITCHEN ORDER BUZZER PATTERN:
+    // Round 1: Rapid Attention Grabber (BZZT! - BZZT! - BZZZZT!)
+    playBuzzBurst(now + 0.00, 0.18, 580); // Pulse 1: 580Hz (BZZT)
+    playBuzzBurst(now + 0.24, 0.18, 620); // Pulse 2: 620Hz (BZZT)
+    playBuzzBurst(now + 0.48, 0.38, 700); // Pulse 3: 700Hz (BZZZZT - Long)
 
-    // SEQUENCE 2: Repeating High Confirmation Chime (0.75s later)
-    playBellNote(659.25, now + 0.75, 0.40, 0.50); // E5
-    playBellNote(783.99, now + 0.87, 0.45, 0.55); // G5
-    playBellNote(1046.5, now + 0.99, 0.50, 0.60); // C6
-    playBellNote(1318.5, now + 1.12, 1.20, 0.70); // E6 (Sustained restaurant order chime)
+    // Round 2: High Urgency Follow-up (0.28s pause, then BZZT! - BZZZZT!)
+    playBuzzBurst(now + 1.00, 0.18, 720); // Pulse 4: 720Hz (BZZT)
+    playBuzzBurst(now + 1.24, 0.45, 820); // Pulse 5: 820Hz (BZZZZT - Piercing high finish)
 
     return true;
   } catch (error) {
-    console.warn("Failed to play order notification sound:", error);
+    console.warn("Failed to play order buzzer notification:", error);
     return false;
   }
 };
@@ -113,4 +145,3 @@ export const setOrderSoundEnabled = (enabled: boolean): void => {
     localStorage.setItem('amoga_admin_order_sound', enabled ? 'true' : 'false');
   } catch (e) {}
 };
-

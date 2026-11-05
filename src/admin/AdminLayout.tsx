@@ -83,9 +83,9 @@ export const AdminLayout: React.FC = () => {
         const latest = newIncoming[0];
         setNewOrderAlert(latest);
 
-        // Play loud distinctive order chime if sound is enabled
+        // Play loud distinctive order buzzer if sound is enabled
         if (soundEnabled) {
-          playOrderNotificationSound(0.65);
+          playOrderNotificationSound(0.9);
         }
       }
     });
@@ -119,13 +119,13 @@ export const AdminLayout: React.FC = () => {
     setSoundEnabled(next);
     setOrderSoundEnabled(next);
     if (next) {
-      // Play a quick preview chime to confirm audio is active
-      playOrderNotificationSound(0.4);
+      // Play a quick preview buzzer to confirm audio is active
+      playOrderNotificationSound(0.85);
     }
   };
 
   const handleTestSound = () => {
-    playOrderNotificationSound(0.65);
+    playOrderNotificationSound(0.95);
   };
 
   // 1. While auth state is initializing, show clean loader
@@ -258,20 +258,20 @@ export const AdminLayout: React.FC = () => {
                 onClick={handleToggleSound}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
                   soundEnabled
-                    ? 'bg-emerald-600 text-white shadow-xs'
+                    ? 'bg-amber-600 text-white shadow-xs'
                     : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                 }`}
-                title={soundEnabled ? "Order Alert Sound is ON. Click to mute." : "Order Alert Sound is MUTED. Click to unmute."}
+                title={soundEnabled ? "Order Alert Buzzer is ON. Click to mute." : "Order Alert Buzzer is MUTED. Click to unmute."}
               >
                 {soundEnabled ? (
                   <>
-                    <Volume2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Chime: ON</span>
+                    <Volume2 className="w-3.5 h-3.5 animate-pulse" />
+                    <span className="hidden sm:inline">Buzzer: ON</span>
                   </>
                 ) : (
                   <>
                     <VolumeX className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Chime: OFF</span>
+                    <span className="hidden sm:inline">Buzzer: OFF</span>
                   </>
                 )}
               </button>
@@ -279,10 +279,10 @@ export const AdminLayout: React.FC = () => {
               <button
                 type="button"
                 onClick={handleTestSound}
-                className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-amoga-burgundy hover:bg-white rounded-lg transition-colors cursor-pointer"
-                title="Test order notification bell"
+                className="px-2 py-1 text-[11px] font-semibold text-slate-600 hover:text-amber-700 hover:bg-white rounded-lg transition-colors cursor-pointer"
+                title="Test loud kitchen order buzzer"
               >
-                Test Chime
+                Test Buzzer
               </button>
             </div>
 
@@ -354,11 +354,11 @@ export const AdminLayout: React.FC = () => {
               </Link>
               <button
                 type="button"
-                onClick={() => playOrderNotificationSound(0.65)}
+                onClick={() => playOrderNotificationSound(0.95)}
                 className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                title="Replay notification sound"
+                title="Replay order buzzer sound"
               >
-                <Volume2 className="w-4 h-4 text-emerald-600" />
+                <Volume2 className="w-4 h-4 text-amber-600" />
               </button>
             </div>
           </div>
