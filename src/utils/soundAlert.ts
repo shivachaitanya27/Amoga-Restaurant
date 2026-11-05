@@ -113,3 +113,4 @@ export const setOrderSoundEnabled = (enabled: boolean): void => {
     localStorage.setItem('amoga_admin_order_sound', enabled ? 'true' : 'false');
   } catch (e) {}
 };
+
