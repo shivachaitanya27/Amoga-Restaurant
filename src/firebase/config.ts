@@ -4,13 +4,13 @@ import { getFirestore, Firestore } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBT0mfsmCyE6GMC9E0hBtgNRkBlaD0-vrk",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "amoga-fd9e5.firebaseapp.com",
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://amoga-fd9e5-default-rtdb.firebaseio.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "amoga-fd9e5",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "amoga-fd9e5.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "381938560627",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:381938560627:web:69768f5a645709e8f28406"
 };
 
 export const isFirebaseConfigured = Boolean(

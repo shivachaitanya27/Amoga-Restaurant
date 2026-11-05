@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { isFirebaseConfigured } from '../firebase/config';
 import { Lock, Mail, ShieldAlert, ArrowLeft, CheckCircle2 } from 'lucide-react';
@@ -9,8 +9,13 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { adminUser, loading, login } = useAuth();
   const navigate = useNavigate();
+
+  // If already authenticated, redirect straight to /admin
+  if (!loading && adminUser) {
+    return <Navigate to="/admin" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +33,19 @@ export const Login: React.FC = () => {
     }
   };
 
-  const fillDemoCredentials = () => {
+  const fillDemoCredentials = async () => {
     setEmail('admin@amoga.in');
     setPassword('amoga2026');
+    setError('');
+    setIsLoading(true);
+    try {
+      await login('admin@amoga.in', 'amoga2026');
+      navigate('/admin');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { 
@@ -18,20 +18,35 @@ import {
   Menu as MenuIcon, 
   X,
   ShieldCheck,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
-  const { adminUser, logout } = useAuth();
+  const { adminUser, loading, logout } = useAuth();
   const { settings } = useRestaurant();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-  // If not logged in, show redirect or login prompt
+  // 1. While auth state is initializing, show clean loader
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amoga-burgundy to-amoga-orange text-white flex items-center justify-center font-serif font-bold text-2xl shadow-lg mb-3 animate-pulse">
+          A
+        </div>
+        <div className="flex items-center gap-2 text-amoga-burgundy font-serif font-bold text-sm">
+          <Loader2 className="w-4 h-4 animate-spin text-amoga-orange" />
+          <span>Loading Admin Portal...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. If not logged in, show redirect to login prompt
   if (!adminUser) {
-    navigate('/admin/login');
-    return null;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   const navItems = [

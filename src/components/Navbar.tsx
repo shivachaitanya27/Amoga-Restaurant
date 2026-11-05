@@ -14,7 +14,8 @@ import {
   Bike,
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  Shield
 } from 'lucide-react';
 import { QRMenuModal } from './QRMenuModal';
 
@@ -124,6 +125,16 @@ export const Navbar: React.FC = () => {
                   </>
                 )}
               </button>
+
+              {/* Admin Panel Quick Link */}
+              <Link
+                to="/admin"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-amoga-burgundy dark:text-amoga-gold hover:text-amoga-orange bg-amber-50/80 dark:bg-white/10 border border-amber-200/80 dark:border-white/10 rounded-xl hover:border-amoga-orange transition-all shadow-sm active:scale-95 cursor-pointer"
+                title="Admin Management Panel"
+              >
+                <Shield className="w-3.5 h-3.5 text-amoga-orange" />
+                <span>Admin</span>
+              </Link>
 
               {/* QR Code generator button */}
               <button
@@ -255,6 +266,21 @@ export const Navbar: React.FC = () => {
                     {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
                   </span>
                 </button>
+              </div>
+
+              {/* Admin Panel Link in Mobile Drawer */}
+              <div className="pt-2">
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl border border-amber-200/80 dark:border-white/10 bg-amber-50/70 dark:bg-white/5 text-amoga-burgundy dark:text-amoga-gold text-xs font-bold transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-amoga-orange" />
+                    <span>Admin Management Panel</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 opacity-40" />
+                </Link>
               </div>
 
               {/* Mobile Quick Action Buttons */}
