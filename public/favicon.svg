@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#651B25"/>
+      <stop offset="50%" stop-color="#9E4200"/>
+      <stop offset="100%" stop-color="#E88A32"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#grad)"/>
+  <circle cx="50" cy="50" r="44" fill="none" stroke="#D8A64A" stroke-width="2" stroke-dasharray="4 2"/>
+  <!-- Elegant 'A' with flame/biryani handi motif -->
+  <path d="M50 20 L68 76 L58 76 L54 62 L46 62 L42 76 L32 76 Z M50 36 L48 52 L52 52 Z" fill="#FFF8EF"/>
+  <circle cx="50" cy="22" r="4" fill="#D8A64A"/>
+</svg>
+

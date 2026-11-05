@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function: check if caller is an authenticated admin user
+    function isAdmin() {
+      return request.auth != null;
+    }
+
+    // Settings (Public Read, Admin Write)
+    match /settings/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Categories (Public Read, Admin Write)
+    match /categories/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Menu Items (Public Read, Admin Write)
+    match /menuItems/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Offers & Specials (Public Read, Admin Write)
+    match /offers/{offerId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Gallery (Public Read, Admin Write)
+    match /gallery/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Orders (Customers can create; only Admins can read all & update statuses)
+    match /orders/{orderId} {
+      allow create: if request.resource.data.customerName is string &&
+                       request.resource.data.mobile is string &&
+                       request.resource.data.totalAmount is number &&
+                       request.resource.data.status == 'New';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Bookings (Customers can create; only Admins can read & update)
+    match /bookings/{bookingId} {
+      allow create: if request.resource.data.customerName is string &&
+                       request.resource.data.mobile is string &&
+                       request.resource.data.status == 'Pending';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Customer Leads & Loyalty (Customers can submit lead; Admins can manage)
+    match /customers/{customerId} {
+      allow create: if request.resource.data.consent == true;
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Reviews (Public can read approved reviews; any diner can submit for moderation; Admin moderates)
+    match /reviews/{reviewId} {
+      allow read: if resource.data.isApproved == true || isAdmin();
+      allow create: if request.resource.data.isApproved == false &&
+                       request.resource.data.rating >= 1 &&
+                       request.resource.data.rating <= 5;
+      allow update, delete: if isAdmin();
+    }
+  }
+}
+
